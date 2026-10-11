@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+/* 디자인 토큰 — 먹(墨) 바탕 · 한지(和紙) 글자 · 주홍(朱) 인장 · 금차(金茶) */
+@theme {
+  --color-ink: #121419;
+  --color-ink-deep: #16181e;
+  --color-panel: #1a1d24;
+  --color-panel-2: #1c1f27;
+  --color-line: #2e323b;
+  --color-line-soft: #23272f;
+  --color-line-strong: #3a3e48;
+  --color-washi: #ece5d6;
+  --color-washi-dim: #cfc8b9;
+  --color-muted: #a8a194;
+  --color-shu: #b63b26;
+  --color-shu-text: #e07457;
+  --color-gold: #c2a266;
+
+  --color-wood: #8fae80;
+  --color-wood-bar: #7d9a6f;
+  --color-fire: #e58a6c;
+  --color-fire-bar: #d2603f;
+  --color-earth: #d1ae6e;
+  --color-earth-bar: #b8924f;
+  --color-metal: #e3ddd0;
+  --color-metal-bar: #d9d2c3;
+  --color-water: #7fa1c6;
+  --color-water-bar: #5b7fa6;
+
+  --font-serif: var(--font-gowun), serif;
+  --font-kanji: var(--font-shippori), serif;
+  --font-sans: var(--font-plex), sans-serif;
+}
+
+html {
+  background: var(--color-ink);
+  color: var(--color-washi);
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+/* 青海波 (세이가이하) 물결 문양 */
+.wave {
+  background-color: var(--color-ink);
+  background-image:
+    radial-gradient(circle at 100% 150%, #121419 24%, #2a2e37 24%, #2a2e37 28%, #121419 28%, #121419 36%, #2a2e37 36%, #2a2e37 40%, transparent 40%, transparent),
+    radial-gradient(circle at 0 150%, #121419 24%, #2a2e37 24%, #2a2e37 28%, #121419 28%, #121419 36%, #2a2e37 36%, #2a2e37 40%, transparent 40%, transparent),
+    radial-gradient(circle at 50% 100%, #2a2e37 10%, #121419 10%, #121419 23%, #2a2e37 23%, #2a2e37 30%, #121419 30%, #121419 43%, #2a2e37 43%, #2a2e37 50%, #121419 50%, #121419 63%, #2a2e37 63%, #2a2e37 71%, transparent 71%, transparent),
+    radial-gradient(circle at 100% 50%, #2a2e37 5%, #121419 5%, #121419 15%, #2a2e37 15%, #2a2e37 20%, #121419 20%, #121419 29%, #2a2e37 29%, #2a2e37 34%, #121419 34%, #121419 44%, #2a2e37 44%, #2a2e37 49%, transparent 49%, transparent),
+    radial-gradient(circle at 0 50%, #2a2e37 5%, #121419 5%, #121419 15%, #2a2e37 15%, #2a2e37 20%, #121419 20%, #121419 29%, #2a2e37 29%, #2a2e37 34%, #121419 34%, #121419 44%, #2a2e37 44%, #2a2e37 49%, transparent 49%, transparent);
+  background-size: 60px 30px;
+}
+
+@keyframes caret-blink {
+  50% { opacity: 0; }
+}
+.caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  margin-left: 2px;
+  vertical-align: -0.2em;
+  background: var(--color-shu-text);
+  animation: caret-blink 1s steps(1) infinite;
+}
+
+@keyframes dot-pulse {
+  0%, 80%, 100% { opacity: 0.25; }
+  40% { opacity: 1; }
+}
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--color-gold);
+  animation: dot-pulse 1.2s infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .caret, .typing-dot { animation: none; }
+}
