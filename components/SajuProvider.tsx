@@ -5,14 +5,16 @@
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { BirthInput, ChatTurn, SajuResult } from "@/types/saju";
-import { readError, streamPost } from "@/lib/client/stream";
+import { readError, streamPost, StreamError } from "@/lib/client/stream";
+import { FAILURE_COPY, type Failure } from "@/lib/errors";
+import { parseSections, sectionsFor } from "@/lib/prompt/sections";
 
 type Status = "idle" | "streaming" | "done" | "error";
 
 interface SajuState {
   input: BirthInput | null;
   result: SajuResult | null;
-  interpretation: { text: string; status: Status; error: string | null };
+  interpretation: { text: string; status: Status; error: Failure | null };
   chat: { history: ChatTurn[]; pending: string | null; status: Status; error: string | null };
   submit: (input: BirthInput) => Promise<string | null>;
   retryInterpretation: () => void;
@@ -22,7 +24,11 @@ interface SajuState {
 
 const SajuContext = createContext<SajuState | null>(null);
 
-const EMPTY_INTERPRETATION = { text: "", status: "idle" as Status, error: null };
+const EMPTY_INTERPRETATION: SajuState["interpretation"] = { text: "", status: "idle", error: null };
+
+function toFailure(error: unknown): Failure {
+  return error instanceof StreamError ? error.failure : { code: "unknown", detail: error instanceof Error ? error.name : undefined };
+}
 const EMPTY_CHAT = { history: [] as ChatTurn[], pending: null, status: "idle" as Status, error: null };
 
 export function SajuProvider({ children }: { children: React.ReactNode }) {
@@ -38,10 +44,17 @@ export function SajuProvider({ children }: { children: React.ReactNode }) {
     interpretAbort.current = controller;
     setInterpretation({ text: "", status: "streaming", error: null });
     streamPost("/api/saju/interpret", birth, (text) => setInterpretation((s) => ({ ...s, text })), controller.signal)
-      .then(() => setInterpretation((s) => ({ ...s, status: "done" })))
+      .then((text) => {
+        // 오류 표시 없이 끝났는데 마지막 섹션(실천 조언)이 없으면 응답이 잘린 것 (플랫폼 시간 초과 등)
+        const keys = sectionsFor(birth.topics);
+        const complete = Boolean(parseSections(text)[keys[keys.length - 1]]);
+        setInterpretation((s) =>
+          complete ? { ...s, status: "done" } : { ...s, status: "error", error: { code: "interrupted", detail: "응답이 완결되지 않음" } },
+        );
+      })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
-        setInterpretation((s) => ({ ...s, status: "error", error: error instanceof Error ? error.message : String(error) }));
+        setInterpretation((s) => ({ ...s, status: "error", error: toFailure(error) }));
       });
   }, []);
 
@@ -78,7 +91,7 @@ export function SajuProvider({ children }: { children: React.ReactNode }) {
       streamPost("/api/saju/chat", { input, history, message }, (text) => setChat((s) => ({ ...s, pending: text })))
         .then((text) => setChat((s) => ({ history: [...s.history, { role: "model", text }], pending: null, status: "done", error: null })))
         .catch((error: unknown) =>
-          setChat((s) => ({ ...s, pending: null, status: "error", error: error instanceof Error ? error.message : String(error) })),
+          setChat((s) => ({ ...s, pending: null, status: "error", error: FAILURE_COPY[toFailure(error).code].title })),
         );
     },
     [input, chat],

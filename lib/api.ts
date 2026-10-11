@@ -7,6 +7,8 @@ import { z } from "zod";
 import type { BirthInput } from "@/types/saju";
 import { birthInputSchema } from "@/lib/saju/schema";
 import { LunarConversionError } from "@/lib/saju/compute";
+import { classifyGeminiError } from "@/lib/gemini/errors";
+import type { Failure } from "@/lib/errors";
 
 export class InputError extends Error {}
 
@@ -39,7 +41,7 @@ function describeError(error: unknown): string {
   return `${error.name}${typeof status === "number" ? ` ${status}` : ""}: ${error.message.slice(0, 500)}`;
 }
 
-/** 스트리밍 도중 오류가 나면 이 마커 뒤에 안내 문구를 붙인다 (클라이언트가 감지) */
+/** 스트리밍 도중 오류가 나면 이 마커 뒤에 분류된 원인(JSON Failure)을 붙인다 (클라이언트가 감지) */
 export const STREAM_ERROR_MARK = "\n@@error\n";
 
 export function textStreamResponse(chunks: AsyncGenerator<string>): Response {
@@ -49,8 +51,9 @@ export function textStreamResponse(chunks: AsyncGenerator<string>): Response {
       try {
         for await (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
       } catch (error) {
-        console.error("[api] 스트리밍 실패:", describeError(error));
-        controller.enqueue(encoder.encode(`${STREAM_ERROR_MARK}풀이를 이어 쓰지 못했어요. 다시 시도해 주세요.`));
+        const failure = classifyGeminiError(error);
+        console.error(`[api] 스트리밍 실패 (${failure.code}):`, describeError(error));
+        controller.enqueue(encoder.encode(`${STREAM_ERROR_MARK}${JSON.stringify(failure)}`));
       } finally {
         controller.close();
       }
@@ -80,5 +83,6 @@ export function rateLimited(request: Request): boolean {
 }
 
 export function tooManyRequests(): Response {
-  return Response.json({ error: "요청이 많아요. 1분 뒤에 다시 시도해 주세요." }, { status: 429 });
+  const failure: Failure = { code: "rate", detail: "서비스 호출 제한 (IP당 분당)" };
+  return Response.json({ error: "요청이 많아요. 1분 뒤에 다시 시도해 주세요.", failure }, { status: 429 });
 }

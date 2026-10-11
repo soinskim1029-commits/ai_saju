@@ -4,12 +4,13 @@ import "server-only";
 
 import { GoogleGenAI } from "@google/genai";
 import type { ChatTurn } from "@/types/saju";
+import { MissingApiKeyError } from "./errors";
 
 let client: GoogleGenAI | null = null;
 
 function getClient(): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY 가 설정되지 않았습니다.");
+  if (!apiKey) throw new MissingApiKeyError();
   client ??= new GoogleGenAI({ apiKey });
   return client;
 }
@@ -59,6 +60,7 @@ export async function* streamText(systemInstruction: string, turns: ChatTurn[]):
       return;
     } catch (error) {
       if (started || !isRetryable(error)) throw error;
+      // 할당량 소진은 같은 키의 다른 모델도 대개 같이 막혀 있지만, 무료 등급은 모델별 한도라 시도해 볼 가치가 있다
       lastError = error;
       console.warn(`[gemini] ${model} 일시 오류(${(error as { status: number }).status}) — 다음 시도로 넘어감`);
     }

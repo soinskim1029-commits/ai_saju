@@ -16,6 +16,9 @@ const bodySchema = z.object({
   message: z.string().trim().min(1, "메시지를 입력해 주세요.").max(500, "메시지는 500자 이내로 입력해 주세요."),
 });
 
+/** LLM 스트리밍은 수십 초 걸릴 수 있다. 배포 플랫폼 기본 제한에 끊기지 않게 늘린다. */
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   if (rateLimited(request)) return tooManyRequests();
   try {

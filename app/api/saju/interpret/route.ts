@@ -5,6 +5,9 @@ import { streamText } from "@/lib/gemini/client";
 import { buildSystemPrompt, buildUserPrompt } from "@/lib/prompt/build";
 import { computeSaju } from "@/lib/saju/compute";
 
+/** LLM 스트리밍은 수십 초 걸릴 수 있다. 배포 플랫폼 기본 제한에 끊기지 않게 늘린다. */
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   if (rateLimited(request)) return tooManyRequests();
   try {

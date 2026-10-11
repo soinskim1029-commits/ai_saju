@@ -6,6 +6,8 @@ import { toPng } from "html-to-image";
 import { useSaju } from "@/components/SajuProvider";
 import { ElementBars, PillarsGrid, STRENGTH_LABEL } from "@/components/SajuChart";
 import { ShareCard } from "@/components/ShareCard";
+import { FailureDialog } from "@/components/FailureDialog";
+import { FAILURE_COPY, type Failure } from "@/lib/errors";
 import { CheckIcon, InfoIcon, SectionTitle, ShareIcon, TopBar, Wave, primaryButton, secondaryButton } from "@/components/ui";
 import { parseSections, sectionsFor, type SectionKey } from "@/lib/prompt/sections";
 import type { Topic } from "@/types/saju";
@@ -59,6 +61,7 @@ export default function ResultPage() {
   const { input, result, interpretation, retryInterpretation } = useSaju();
   const [tab, setTab] = useState<SectionKey | null>(null);
   const [shareState, setShareState] = useState<"idle" | "working" | "error">("idle");
+  const [dismissed, setDismissed] = useState<Failure | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
   if (!input || !result) {
@@ -253,9 +256,11 @@ export default function ResultPage() {
         )}
       </section>
 
-      {interpretation.status === "error" && (
+      {interpretation.status === "error" && interpretation.error && (
         <div role="alert" className="mx-6 mt-6 flex flex-col gap-3 rounded-md border border-shu/60 bg-[#221a19] p-4">
-          <p className="m-0 text-sm text-washi">{interpretation.error}</p>
+          <p className="m-0 text-sm text-washi">
+            <span className="text-shu-text">{FAILURE_COPY[interpretation.error.code].kind}</span> · {FAILURE_COPY[interpretation.error.code].title}
+          </p>
           <button type="button" onClick={retryInterpretation} className={secondaryButton}>
             풀이 다시 받기
           </button>
@@ -285,6 +290,12 @@ export default function ResultPage() {
 
       <div className="min-h-8 flex-1" />
       <Wave />
+
+      <FailureDialog
+        failure={interpretation.status === "error" && interpretation.error !== dismissed ? interpretation.error : null}
+        onRetry={retryInterpretation}
+        onClose={() => setDismissed(interpretation.error)}
+      />
 
       {/* 공유 이미지용 카드: 화면 밖에 그려두고 캡처한다 */}
       <div aria-hidden="true" className="pointer-events-none fixed -left-[10000px] top-0">
